@@ -22,14 +22,14 @@ export const WordPanel = memo(function WordPanel({ character }: { character: Per
   </View>;
 });
 const styles = StyleSheet.create({
-  wrapper: { minHeight: 94, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.lg, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
-  characterBlock: { alignItems: 'center', justifyContent: 'center', minWidth: 72 },
-  character: { fontSize: 64, lineHeight: 72, color: theme.colors.ink, includeFontPadding: false },
-  speakButton: { width: 34, height: 30, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
-  details: { flex: 1, minWidth: 0, gap: 5 },
-  pinyin: { fontSize: theme.font.title, fontWeight: '700', color: theme.colors.primary },
-  meaning: { fontSize: theme.font.body, color: theme.colors.ink },
-  streak: { fontSize: theme.font.small, color: theme.colors.subtle },
+  wrapper: { minHeight: 76, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md, paddingHorizontal: theme.spacing.sm, paddingVertical: 0 },
+  characterBlock: { alignItems: 'center', justifyContent: 'center', minWidth: 62 },
+  character: { fontSize: 54, lineHeight: 60, color: theme.colors.ink, includeFontPadding: false },
+  speakButton: { width: 32, height: 28, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
+  details: { flex: 1, minWidth: 0, gap: 3 },
+  pinyin: { fontSize: theme.font.title - 1, fontWeight: '700', color: theme.colors.primary },
+  meaning: { fontSize: theme.font.small, color: theme.colors.ink },
+  streak: { fontSize: theme.font.tiny, color: theme.colors.subtle },
   empty: { minHeight: 74, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: theme.colors.subtle, fontSize: theme.font.body },
 });
