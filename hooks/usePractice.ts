@@ -101,7 +101,7 @@ export function usePractice() {
 
   const addCharacter = useCallback(async (rawHanzi: string, manualPinyin = '', manualMeaning = '') => {
     // Keep the full input intact for Chinese IME composition, then process each Hanzi separately.
-    const characters = Array.from(rawHanzi.trim()).filter(char => /[\\u3400-\\u9FFF]/u.test(char));
+    const characters = Array.from(rawHanzi.trim()).filter(char => /[\u3400-\u9FFF]/u.test(char));
     if (!characters.length) {
       setNotice('Введите китайский иероглиф или слово.');
       return 'invalid';
