@@ -75,8 +75,8 @@ export function PracticeScreen() {
         <Text style={styles.inputHint}>Пиньинь и перевод заполняются автоматически, если иероглиф есть в словаре.</Text>
       </View>
 
-      {practice.notice ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{practice.notice}</Text> : null}
-      {practice.storageError ? <Text style={styles.storageWarning}>{practice.storageError}</Text> : null}
+      {practice.notice ? <Text accessibilityLiveRegion="polite" numberOfLines={1} ellipsizeMode="tail" style={styles.notice}>{practice.notice}</Text> : null}
+      {practice.storageError ? <Text numberOfLines={1} style={styles.storageWarning}>{practice.storageError}</Text> : null}
 
       <WordPanel character={practice.character} />
 
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', gap: 6 },
   detailInput: { flex: 1, minWidth: 0, height: 38, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 10, paddingVertical: 0, color: theme.colors.ink, fontSize: 13, includeFontPadding: false, textAlignVertical: 'center' },
   inputHint: { color: theme.colors.subtle, fontSize: 9, lineHeight: 12, paddingHorizontal: 3 },
-  notice: { color: theme.colors.primary, fontSize: theme.font.tiny, lineHeight: 16 },
-  storageWarning: { color: theme.colors.dangerText, fontSize: theme.font.tiny },
+  notice: { color: theme.colors.primary, fontSize: 10, lineHeight: 13, maxHeight: 14, marginHorizontal: 3 },
+  storageWarning: { color: theme.colors.dangerText, fontSize: 10, lineHeight: 13, maxHeight: 14, marginHorizontal: 3 },
   waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
   waitingText: { flex: 1, color: theme.colors.subtle, fontSize: theme.font.tiny },
   retryWaiting: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
