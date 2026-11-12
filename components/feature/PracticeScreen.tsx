@@ -27,9 +27,12 @@ export function PracticeScreen() {
   const disabled = !practice.shape || !practice.attemptsLoaded || practice.checking || practice.loading || practice.liveStroke.length > 0 || (!practice.awaitingRetry && !practice.strokes.length);
 
   useEffect(() => {
-    const found = dictionaryLookup(Array.from(hanzi.trim())[0] ?? '');
-    if (found) { setPinyin(found.pinyin); setMeaning(found.meaning); }
-    else if (!hanzi.trim()) { setPinyin(''); setMeaning(''); }
+    const chars = Array.from(hanzi.trim()).filter(char => /[\\u3400-\\u9FFF]/u.test(char));
+    if (chars.length === 1) {
+      const found = dictionaryLookup(chars[0]);
+      if (found) { setPinyin(found.pinyin); setMeaning(found.meaning); }
+      else if (!hanzi.trim()) { setPinyin(''); setMeaning(''); }
+    } else if (chars.length > 1 || !hanzi.trim()) { setPinyin(''); setMeaning(''); }
   }, [hanzi]);
 
   const add = async () => {
@@ -63,7 +66,7 @@ export function PracticeScreen() {
 
       <View style={styles.addPanel}>
         <View style={styles.addRow}>
-          <TextInput value={hanzi} onChangeText={v => setHanzi(Array.from(v).slice(0, 1).join(''))} placeholder="Иероглиф" placeholderTextColor={theme.colors.subtle} style={styles.hanziInput} maxLength={2} multiline={false} numberOfLines={1} ellipsizeMode="tail" />
+          <TextInput value={hanzi} onChangeText={setHanzi} placeholder="Иероглиф или слово" placeholderTextColor={theme.colors.subtle} style={styles.hanziInput} multiline={false} numberOfLines={1} ellipsizeMode="tail" />
           <Pressable accessibilityRole="button" onPress={add} disabled={!hanzi.trim() || !practice.ready} style={[styles.addButton, (!hanzi.trim() || !practice.ready) && styles.disabled]}>
             <Ionicons name="add" size={20} color={theme.colors.white} /><Text style={styles.addButtonText} numberOfLines={1}>Добавить</Text>
           </Pressable>
@@ -164,11 +167,11 @@ const styles = StyleSheet.create({
   progressText: { color: theme.colors.primary, fontWeight: '700', fontSize: theme.font.small },
   addPanel: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: 7, gap: 6, borderWidth: 1, borderColor: theme.colors.border },
   addRow: { flexDirection: 'row', gap: 6 },
-  hanziInput: { flex: 1, minWidth: 0, height: 42, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 12, paddingVertical: 0, color: theme.colors.ink, fontSize: 16, includeFontPadding: false, textAlignVertical: 'center' },
-  addButton: { minWidth: 112, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 10, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm },
+  hanziInput: { flex: 1, minWidth: 0, height: 39, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 11, paddingVertical: 0, color: theme.colors.ink, fontSize: 16, includeFontPadding: false, textAlignVertical: 'center' },
+  addButton: { minWidth: 108, height: 39, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 10, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm },
   addButtonText: { color: theme.colors.white, fontSize: theme.font.small, fontWeight: '600', flexShrink: 1 },
   detailRow: { flexDirection: 'row', gap: 6 },
-  detailInput: { flex: 1, minWidth: 0, height: 38, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 10, paddingVertical: 0, color: theme.colors.ink, fontSize: 13, includeFontPadding: false, textAlignVertical: 'center' },
+  detailInput: { flex: 1, minWidth: 0, height: 35, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 9, paddingVertical: 0, color: theme.colors.ink, fontSize: 13, includeFontPadding: false, textAlignVertical: 'center' },
   inputHint: { color: theme.colors.subtle, fontSize: 9, lineHeight: 12, paddingHorizontal: 3 },
   notice: { color: theme.colors.primary, fontSize: 10, lineHeight: 13, maxHeight: 14, marginHorizontal: 3 },
   storageWarning: { color: theme.colors.dangerText, fontSize: 10, lineHeight: 13, maxHeight: 14, marginHorizontal: 3 },
