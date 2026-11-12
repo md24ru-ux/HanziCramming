@@ -131,7 +131,7 @@ export function usePractice() {
   }, [data.active, data.waiting]);
 
   const selectCharacter = useCallback((id: string) => {
-    if (!checking && !awaitingRetry && data.active.some(x => x.id === id && !x.mastered)) {
+    if (!checking && !awaitingRetry && data.active.some(x => x.id === id)) {
       setData(p => ({ ...p, currentId: id }));
     }
   }, [checking, awaitingRetry, data.active]);
