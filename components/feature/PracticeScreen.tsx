@@ -27,7 +27,7 @@ export function PracticeScreen() {
   const disabled = !practice.shape || !practice.attemptsLoaded || practice.checking || practice.loading || practice.liveStroke.length > 0 || (!practice.awaitingRetry && !practice.strokes.length);
 
   useEffect(() => {
-    const chars = Array.from(hanzi.trim()).filter(char => /[\\u3400-\\u9FFF]/u.test(char));
+    const chars = Array.from(hanzi.trim()).filter(char => /[\u3400-\u9FFF]/u.test(char));
     if (chars.length === 1) {
       const found = dictionaryLookup(chars[0]);
       if (found) { setPinyin(found.pinyin); setMeaning(found.meaning); }
