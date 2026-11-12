@@ -1,65 +1,158 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/constants/theme';
 import { usePractice } from '@/hooks/usePractice';
 import { useScreenSize } from '@/hooks/useScreenSize';
-import { CategoryStrip } from './CategoryStrip';
-import { WordPanel } from './WordPanel';
 import { WritingBoard } from './WritingBoard';
-import { StudySheet } from './StudySheet';
-import { PracticeModeStrip } from './PracticeModeStrip';
-import { PracticeEmptyState } from './PracticeEmptyState';
+import { WordPanel } from './WordPanel';
+import { dictionaryLookup } from '@/services/personalDictionary';
+
 export function PracticeScreen() {
   const practice = usePractice();
   const screen = useScreenSize();
-  const landscape = screen.width >= 700 || screen.width > screen.height;
-  const compact = screen.height < 900;
-  const [sheet, setSheet] = useState<'help' | 'progress' | null>(null);
+  const compact = screen.height < 850;
+  const [hanzi, setHanzi] = useState('');
+  const [pinyin, setPinyin] = useState('');
+  const [meaning, setMeaning] = useState('');
   const [boardSpace, setBoardSpace] = useState({ width: 280, height: 280 });
   const measureBoard = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    setBoardSpace(previous => previous.width === width && previous.height === height ? previous : { width: Math.max(1, width), height: Math.max(1, height) });
+    setBoardSpace(prev => prev.width === width && prev.height === height ? prev : { width: Math.max(1, width), height: Math.max(1, height) });
   }, []);
-  const closeSheet = useCallback(() => setSheet(null), []);
   const boardSize = Math.max(1, Math.min(screen.width * practice.boardScale, boardSpace.width, boardSpace.height, 520));
   const disabled = !practice.shape || !practice.attemptsLoaded || practice.checking || practice.loading || practice.liveStroke.length > 0 || (!practice.awaitingRetry && !practice.strokes.length);
-  const modeStrip = <PracticeModeStrip compact={compact} mode={practice.studyMode} totalMastered={practice.totalMastered} disabled={practice.checking || practice.awaitingRetry || !practice.ready} toleranceMode={practice.toleranceMode} toleranceLimit={practice.toleranceLimit} onSelect={practice.selectMode} onCycleTolerance={practice.cycleTolerance} />;
-  const wordPanel = practice.character ? <View style={[styles.wordSide, landscape ? styles.wideWordSide : null]}>{landscape ? modeStrip : null}<WordPanel character={practice.character} compact={compact} landscape={landscape} exampleView={practice.exampleView} onCycle={practice.cycleExample} />{landscape && screen.height >= 450 ? <View style={styles.topicNote}><Text style={styles.topicHeading}>{practice.category.title}</Text><Text style={styles.topicCaption}>{practice.isReview ? `Для повторения: ${practice.mastered} освоенных` : `25 иероглифов · освоено ${practice.mastered}`}</Text><View style={styles.topicTrack}><View style={[styles.topicFill, { width: `${practice.mastered * 4}%` }]} /></View><Text style={styles.noteText}>{practice.isReview ? 'Повторение не меняет серию и учебный прогресс.' : 'Отдельная черта — одно движение.\nПишите в правильном порядке.'}</Text></View> : null}</View> : null;
-  const writingPanel = <View style={styles.writingSide}>
-    <View style={styles.boardSpace} onLayout={measureBoard}>
-      <WritingBoard size={boardSize} shape={practice.shape} strokes={practice.strokes} liveStroke={practice.liveStroke} hint={practice.hint} loading={practice.loading} error={practice.loadError} checking={practice.checking} awaitingRetry={practice.awaitingRetry} flash={practice.flash} onResize={practice.resizeBoard} onBegin={practice.beginStroke} onMove={practice.moveStroke} onEnd={practice.endStroke} onCancel={practice.cancelStroke} onHint={practice.toggleHint} onClear={practice.clear} onRetry={practice.retryLoad} />
-    </View>
-    <View style={styles.boardFooter} accessibilityLiveRegion="polite">
-      <View style={styles.footerDetails}>
-        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.footerText}>Попытка {practice.flash || practice.awaitingRetry ? Math.max(1, practice.attemptCount) : practice.attemptCount + 1} · {practice.isReview ? 'Повторение' : practice.usedHint ? 'С подсказкой' : 'Без подсказки'}</Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.footerText, practice.flash === 'success' ? styles.goodFeedback : practice.flash === 'error' ? styles.retryFeedback : null]}>{practice.feedback || (practice.isReview ? 'Освоен · прогресс не меняется' : `Серия ${practice.streak} / 10`)}</Text>
+
+  useEffect(() => {
+    const found = dictionaryLookup(Array.from(hanzi.trim())[0] ?? '');
+    if (found) { setPinyin(found.pinyin); setMeaning(found.meaning); }
+    else if (!hanzi.trim()) { setPinyin(''); setMeaning(''); }
+  }, [hanzi]);
+
+  const add = async () => {
+    const result = await practice.addCharacter(hanzi, pinyin, meaning);
+    if (result === 'added' || result === 'offline' || result === 'missing' || result === 'exists' || result === 'pending') {
+      setHanzi(''); setPinyin(''); setMeaning('');
+    }
+  };
+
+  return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <StatusBar style="dark" />
+    <View style={[styles.page, compact ? styles.compactPage : null]}>
+      <View style={styles.header}>
+        <View style={styles.brand}>
+          <View style={styles.brandMark}><Text style={styles.brandCharacter}>汉</Text></View>
+          <View><Text style={styles.brandTitle}>HanziCramming</Text><Text style={styles.brandSubtitle}>ЛИЧНЫЙ СЛОВАРЬ И ТРЕНИРОВКА</Text></View>
+        </View>
+        <View style={styles.progress}>
+          <Ionicons name="leaf-outline" size={16} color={theme.colors.primary} />
+          <Text style={styles.progressText}>{practice.totalMastered} / {practice.activeCount}</Text>
+        </View>
       </View>
-      <Text style={styles.strokeCount}>{practice.strokes.length} / {practice.shape?.strokes.length ?? '…'} черт</Text>
+
+      <View style={styles.addPanel}>
+        <View style={styles.addRow}>
+          <TextInput value={hanzi} onChangeText={v => setHanzi(Array.from(v).slice(0, 1).join(''))} placeholder="Вставьте иероглиф" placeholderTextColor={theme.colors.subtle} style={styles.hanziInput} maxLength={2} />
+          <Pressable accessibilityRole="button" onPress={add} disabled={!hanzi.trim() || !practice.ready} style={[styles.addButton, (!hanzi.trim() || !practice.ready) && styles.disabled]}>
+            <Ionicons name="add" size={20} color={theme.colors.white} /><Text style={styles.addButtonText}>Добавить</Text>
+          </Pressable>
+        </View>
+        <View style={styles.detailRow}>
+          <TextInput value={pinyin} onChangeText={setPinyin} placeholder="Пиньинь (если неизвестен)" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} autoCapitalize="none" />
+          <TextInput value={meaning} onChangeText={setMeaning} placeholder="Перевод" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} />
+        </View>
+      </View>
+
+      {practice.notice ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{practice.notice}</Text> : null}
+      {practice.storageError ? <Text style={styles.storageWarning}>{practice.storageError}</Text> : null}
+
+      <WordPanel character={practice.character} />
+      {practice.activeCount > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.characterList}>{practice.activeCharacters.map(item => <Pressable key={item.id} onPress={() => practice.selectCharacter(item.id)} style={[styles.characterChip, practice.character?.id === item.id && styles.characterChipSelected]}><Text style={[styles.characterChipText, practice.character?.id === item.id && styles.characterChipTextSelected]}>{item.hanzi}{item.mastered ? ' ✓' : ''}</Text></Pressable>)}</ScrollView> : null}
+
+      {practice.waitingCount > 0 ? <View style={styles.waitingRow}>
+        <Text numberOfLines={2} style={styles.waitingText}>Ожидают эталона: {practice.waitingCharacters.map(x => x.hanzi).join('、')}</Text>
+        <Pressable onPress={practice.retryWaiting} style={styles.retryWaiting}><Ionicons name="refresh" size={17} color={theme.colors.primary} /></Pressable>
+      </View> : null}
+
+      <View style={styles.modeRow}>
+        <Text style={styles.modeLabel}>Точность</Text>
+        {(['L','M','H'] as const).map(mode => <Pressable key={mode} onPress={() => practice.selectTolerance(mode)} style={[styles.modeButton, practice.toleranceMode === mode && styles.modeSelected]}>
+          <Text style={[styles.modeText, practice.toleranceMode === mode && styles.modeTextSelected]}>{mode}</Text>
+        </Pressable>)}
+        <Text style={styles.modeHint}>{practice.toleranceLimit}%</Text>
+      </View>
+
+      {!practice.ready ? <View style={styles.loading}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.loadingText}>Загружаем личный словарь…</Text></View>
+      : practice.character ? <View style={styles.practiceBody}>
+        <View style={styles.boardSpace} onLayout={measureBoard}>
+          <WritingBoard size={boardSize} shape={practice.shape} strokes={practice.strokes} liveStroke={practice.liveStroke} hint={practice.hint} loading={practice.loading} error={practice.loadError} checking={practice.checking} awaitingRetry={practice.awaitingRetry} flash={practice.flash} onBegin={practice.beginStroke} onMove={practice.moveStroke} onEnd={practice.endStroke} onCancel={practice.cancelStroke} onHint={practice.toggleHint} onClear={practice.clear} onRetry={practice.retryLoad} onResize={practice.resizeBoard} />
+        </View>
+        <View style={styles.footer}>
+          <Text numberOfLines={1} style={styles.footerText}>{practice.feedback || `Попытка ${practice.attemptCount + (practice.flash ? 0 : 1)} · серия ${practice.streak}/10`}</Text>
+          <Text style={styles.strokeCount}>{practice.strokes.length} / {practice.shape?.strokes.length ?? '…'}</Text>
+        </View>
+        <Pressable accessibilityRole="button" onPress={practice.check} disabled={disabled} style={[styles.checkButton, disabled && styles.disabled]}>
+          <Ionicons name={practice.awaitingRetry ? 'repeat-outline' : 'checkmark-outline'} size={22} color={theme.colors.white} />
+          <Text style={styles.checkText}>{practice.checking ? 'Проверяем…' : practice.awaitingRetry ? 'Повторить' : 'Проверить'}</Text>
+        </Pressable>
+      </View> : <View style={styles.emptyState}>
+        <Ionicons name="book-outline" size={40} color={theme.colors.primary} />
+        <Text style={styles.emptyTitle}>Личный словарь пока пуст</Text>
+        <Text style={styles.emptyText}>Вставьте китайский иероглиф в поле выше. Он появится здесь после проверки эталона написания.</Text>
+      </View>}
     </View>
-    <Pressable accessibilityRole="button" accessibilityLabel={practice.awaitingRetry ? 'Повторить начертание' : 'Проверить начертание иероглифа'} accessibilityState={{ disabled }} onPress={practice.check} disabled={disabled} style={({ pressed }) => [styles.checkButton, disabled ? styles.disabledButton : null, pressed ? styles.pressedPrimary : null]}><Ionicons name={practice.awaitingRetry ? 'repeat-outline' : 'checkmark-outline'} size={22} color={theme.colors.white} /><Text style={styles.checkText}>{practice.checking ? 'Проверяем…' : practice.awaitingRetry ? 'Повторить' : 'Проверить'}</Text></Pressable>
-  </View>;
-  return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><StatusBar style="dark" /><View style={[styles.page, compact ? styles.compactPage : null]}>
-    <View style={[styles.header, compact ? styles.compactHeader : null]}><View style={styles.brand}><View style={styles.brandMark}><Text style={styles.brandCharacter}>永</Text></View><View style={styles.brandText}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} style={styles.brandTitle}>HanziPractice</Text><Text style={styles.brandSubtitle}>КИТАЙСКОЕ ПИСЬМО</Text></View></View><View style={styles.headerActions}><Pressable accessibilityRole="button" accessibilityLabel={`Прогресс: освоено ${practice.totalMastered} из 250. Открыть статистику.`} accessibilityState={{ disabled: practice.checking || !practice.ready }} disabled={practice.checking || !practice.ready} onPress={() => setSheet('progress')} style={({ pressed }) => [styles.progressButton, pressed ? styles.pressed : null]}><Ionicons name="leaf-outline" size={16} color={theme.colors.primary} /><Text style={styles.progressText}>{practice.totalMastered}<Text style={styles.progressTotal}> / 250</Text></Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Инструкция и цвета черт" onPress={() => setSheet('help')} style={({ pressed }) => [styles.helpButton, pressed ? styles.pressed : null]}><Ionicons name="information-circle-outline" size={25} color={theme.colors.subtle} /></Pressable></View></View>
-    <CategoryStrip compact={compact} items={practice.categories} selectedId={practice.category.id} onSelect={practice.selectCategory} disabled={practice.checking || !practice.ready} />
-    {!landscape || !practice.character ? modeStrip : null}
-    {practice.storageError ? <Text style={styles.storageWarning} numberOfLines={1}>{practice.storageError}</Text> : null}
-    {!practice.ready ? <View style={styles.loading}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.loadingText}>Восстанавливаем прогресс…</Text></View> : practice.character ? <View style={[styles.body, landscape ? styles.landscapeBody : null]}>{wordPanel}{writingPanel}</View> : <PracticeEmptyState categoryTitle={practice.category.title} review={practice.isReview} compact={compact} landscape={landscape}
-      title={practice.isReview ? practice.totalMastered ? 'Нет освоенных знаков' : 'Пока нечего повторять' : practice.nextCategory ? 'Тема освоена' : 'Все 250 освоены'}
-      description={practice.isReview ? practice.totalMastered ? 'В этой теме пока нет освоенных знаков. Выберите другую тему.' : 'Сначала освойте знак: 10 верных попыток подряд без подсказок.' : 'Знаки написаны верно 10 раз подряд без подсказок и исключены из основной выдачи.'}
-      actionLabel={practice.isReview ? practice.nextReviewCategory ? 'Тема для повторения' : 'Перейти к обучению' : practice.nextCategory ? 'Следующая тема' : 'Повторить освоенные'}
-      actionCaption={practice.isReview ? practice.nextReviewCategory?.title : practice.nextCategory?.title}
-      onAction={() => {
-        if (practice.isReview) {
-          if (practice.nextReviewCategory) practice.selectCategory(practice.nextReviewCategory.id);
-          else practice.selectMode('learn');
-        } else if (practice.nextCategory) practice.selectCategory(practice.nextCategory.id);
-        else practice.selectMode('review');
-      }} />}
-  </View><StudySheet mode={sheet} onClose={closeSheet} /></SafeAreaView>;
+  </SafeAreaView>;
 }
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.background }, page: { flex: 1, width: '100%', maxWidth: 960, alignSelf: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, gap: theme.spacing.sm }, compactPage: { paddingVertical: theme.spacing.xs, gap: 6 }, header: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm }, compactHeader: { height: 40 }, brand: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flexShrink: 1 }, brandMark: { width: 34, height: 34, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm, justifyContent: 'center', alignItems: 'center' }, brandCharacter: { fontSize: 26, color: theme.colors.white, lineHeight: 32, includeFontPadding: false }, brandText: { flex: 1, minWidth: 0 }, brandTitle: { color: theme.colors.ink, fontSize: theme.font.title, fontWeight: '700', includeFontPadding: false, flexShrink: 1 }, brandSubtitle: { fontSize: 8, color: theme.colors.subtle, letterSpacing: 0.8, includeFontPadding: false }, headerActions: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }, progressButton: { height: 38, flexDirection: 'row', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.sm, alignItems: 'center', borderRadius: theme.radius.pill, backgroundColor: theme.colors.primarySoft }, progressText: { color: theme.colors.primary, fontSize: theme.font.small, fontWeight: '700' }, progressTotal: { fontWeight: '400', color: theme.colors.subtle }, helpButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, body: { flex: 1, minHeight: 0, gap: theme.spacing.sm }, landscapeBody: { flexDirection: 'row', gap: theme.spacing.lg }, wordSide: { flexShrink: 0 }, wideWordSide: { flex: 1, minWidth: 0, justifyContent: 'center', gap: theme.spacing.sm }, writingSide: { flex: 1, minHeight: 0, minWidth: 0, gap: theme.spacing.sm }, boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, boardFooter: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm }, footerDetails: { flex: 1, minWidth: 0, gap: 2 }, footerText: { flexShrink: 1, color: theme.colors.subtle, fontSize: theme.font.tiny, includeFontPadding: false }, strokeCount: { color: theme.colors.subtle, fontSize: theme.font.tiny, includeFontPadding: false }, feedback: { flex: 1, fontSize: theme.font.small, color: theme.colors.subtle }, goodFeedback: { color: theme.colors.primary }, retryFeedback: { color: theme.colors.dangerText }, checkButton: { height: 44, width: '100%', borderRadius: theme.radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, backgroundColor: theme.colors.primary }, checkText: { color: theme.colors.white, fontSize: theme.font.body, fontWeight: '600', includeFontPadding: false }, disabledButton: { opacity: 0.55 }, pressedPrimary: { opacity: 0.8, transform: [{ scale: 0.98 }] }, pressed: { opacity: 0.65 }, topicNote: { marginTop: theme.spacing.lg, padding: theme.spacing.md, backgroundColor: theme.colors.surfaceTint, borderRadius: theme.radius.md, gap: theme.spacing.sm }, topicHeading: { fontSize: theme.font.body, fontWeight: '600', color: theme.colors.primary }, topicCaption: { fontSize: theme.font.small, color: theme.colors.subtle }, topicTrack: { height: 4, backgroundColor: theme.colors.border, borderRadius: 2, overflow: 'hidden' }, topicFill: { height: '100%', backgroundColor: theme.colors.primary }, noteText: { marginTop: theme.spacing.sm, fontSize: theme.font.body, lineHeight: 26, color: theme.colors.subtle }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md }, loadingText: { color: theme.colors.subtle, fontSize: theme.font.body }, storageWarning: { fontSize: theme.font.tiny, color: theme.colors.dangerText }, completion: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: theme.spacing.md, maxWidth: 420, alignSelf: 'center', paddingHorizontal: theme.spacing.md }, completionMark: { width: 88, height: 88, borderRadius: theme.radius.lg, backgroundColor: theme.colors.primarySoft, alignItems: 'center', justifyContent: 'center' }, completionEyebrow: { color: theme.colors.subtle, fontSize: theme.font.small, textAlign: 'center' }, completionTitle: { fontSize: theme.font.large, fontWeight: '700', color: theme.colors.primary, textAlign: 'center' }, completionText: { fontSize: theme.font.body, lineHeight: 26, color: theme.colors.subtle, textAlign: 'center' }, nextButton: { height: 52, width: '100%', borderRadius: theme.radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, backgroundColor: theme.colors.primary, marginTop: theme.spacing.sm }, nextTopic: { fontSize: theme.font.small, color: theme.colors.subtle, textAlign: 'center' },
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  page: { flex: 1, width: '100%', maxWidth: 960, alignSelf: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, gap: theme.spacing.xs },
+  compactPage: { paddingVertical: 3, gap: 3 },
+  header: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  brandMark: { width: 34, height: 34, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm, alignItems: 'center', justifyContent: 'center' },
+  brandCharacter: { fontSize: 24, color: theme.colors.white },
+  brandTitle: { fontSize: 19, fontWeight: '700', color: theme.colors.ink },
+  brandSubtitle: { fontSize: 8, color: theme.colors.subtle, letterSpacing: 0.6 },
+  progress: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.colors.primarySoft, paddingHorizontal: 11, paddingVertical: 7, borderRadius: theme.radius.pill },
+  progressText: { color: theme.colors.primary, fontWeight: '700', fontSize: theme.font.small },
+  addPanel: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: 7, gap: 6, borderWidth: 1, borderColor: theme.colors.border },
+  addRow: { flexDirection: 'row', gap: 6 },
+  hanziInput: { flex: 1, minWidth: 0, height: 40, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 12, color: theme.colors.ink, fontSize: 18 },
+  addButton: { height: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 12, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm },
+  addButtonText: { color: theme.colors.white, fontSize: theme.font.small, fontWeight: '600' },
+  detailRow: { flexDirection: 'row', gap: 6 },
+  detailInput: { flex: 1, minWidth: 0, height: 34, borderRadius: theme.radius.sm, backgroundColor: theme.colors.board, paddingHorizontal: 9, color: theme.colors.ink, fontSize: 12 },
+  notice: { color: theme.colors.primary, fontSize: theme.font.tiny, lineHeight: 16 },
+  storageWarning: { color: theme.colors.dangerText, fontSize: theme.font.tiny },
+  characterList: { alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  characterChip: { minWidth: 34, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7, backgroundColor: theme.colors.surfaceTint },
+  characterChipSelected: { backgroundColor: theme.colors.primary },
+  characterChipText: { color: theme.colors.primary, fontSize: 15 },
+  characterChipTextSelected: { color: theme.colors.white },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
+  waitingText: { flex: 1, color: theme.colors.subtle, fontSize: theme.font.tiny },
+  retryWaiting: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  modeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'flex-end' },
+  modeLabel: { color: theme.colors.subtle, fontSize: theme.font.tiny, marginRight: 4 },
+  modeButton: { width: 30, height: 27, borderRadius: 6, backgroundColor: theme.colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
+  modeSelected: { backgroundColor: theme.colors.primary },
+  modeText: { color: theme.colors.primary, fontWeight: '700', fontSize: 12 },
+  modeTextSelected: { color: theme.colors.white },
+  modeHint: { color: theme.colors.subtle, fontSize: 10, minWidth: 30 },
+  practiceBody: { flex: 1, minHeight: 0, gap: 5 },
+  boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  footer: { minHeight: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  footerText: { flex: 1, color: theme.colors.subtle, fontSize: theme.font.tiny },
+  strokeCount: { color: theme.colors.subtle, fontSize: theme.font.tiny },
+  checkButton: { height: 42, width: '100%', borderRadius: theme.radius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.primary },
+  checkText: { color: theme.colors.white, fontSize: theme.font.body, fontWeight: '600' },
+  disabled: { opacity: 0.5 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  loadingText: { color: theme.colors.subtle },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 25 },
+  emptyTitle: { color: theme.colors.primary, fontSize: 19, fontWeight: '700' },
+  emptyText: { color: theme.colors.subtle, textAlign: 'center', lineHeight: 22 },
 });

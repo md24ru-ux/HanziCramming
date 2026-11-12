@@ -41,55 +41,32 @@ function validShape(value: unknown): value is CharacterShape {
 export async function loadShape(hanzi: string): Promise<CharacterShape> {
   const existing = memory.get(hanzi);
   if (existing) return existing;
-
   const key = `shtrikh:shape:v1:${hanzi}`;
-
   try {
     const stored = await AsyncStorage.getItem(key);
-
     if (stored) {
       const data = JSON.parse(stored);
-
-      if (validShape(data)) {
-        memory.set(hanzi, data);
-        return data;
-      }
+      if (validShape(data)) { memory.set(hanzi, data); return data; }
     }
-  } catch {
-    // An unavailable cache does not prevent a network request.
-  }
+  } catch { /* Continue with a network lookup if the local cache cannot be read. */ }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
-
   try {
     const response = await fetch(
       `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(hanzi)}.json`,
       { signal: controller.signal }
     );
-
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить образец. Проверьте интернет и повторите.');
-    }
-
+    if (response.status === 404) throw new Error('REFERENCE_NOT_FOUND');
+    if (!response.ok) throw new Error('NETWORK_UNAVAILABLE');
     const data: unknown = await response.json();
-
-    if (!validShape(data)) {
-      throw new Error('Образец недоступен. Повторите загрузку.');
-    }
-
+    if (!validShape(data)) throw new Error('REFERENCE_NOT_FOUND');
     memory.set(hanzi, data);
-
-    await AsyncStorage.setItem(key, JSON.stringify(data))
-      .catch(() => undefined);
-
+    await AsyncStorage.setItem(key, JSON.stringify(data)).catch(() => undefined);
     return data;
   } catch (error) {
-    throw new Error(
-      error instanceof Error && error.name !== 'AbortError'
-        ? error.message
-        : 'Загрузка заняла слишком много времени. Повторите.'
-    );
+    if (error instanceof Error && error.message === 'REFERENCE_NOT_FOUND') throw error;
+    throw new Error('Интернет не доступен. Не удалось проверить наличие эталона');
   } finally {
     clearTimeout(timer);
   }
