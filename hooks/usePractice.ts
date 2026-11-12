@@ -68,7 +68,7 @@ export function usePractice() {
     resetSession();
     if (!ready || !character) { setLoading(false); return () => { active = false; }; }
     setLoading(true);
-    loadReference(character.hanzi).then(v => { if (active) setShape(v); })
+    loadReference(character.hanzi).then(v => { if (active) { setShape(v); setNotice(current => current === offlineMessage ? '' : current); } })
       .catch(e => { if (active) setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить эталон.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; if (timer.current) clearTimeout(timer.current); };
@@ -80,6 +80,7 @@ export function usePractice() {
     for (const item of data.waiting) {
       try {
         await loadShape(item.hanzi);
+        setNotice(current => current === offlineMessage ? '' : current);
         setData(prev => {
           const pending = prev.waiting.find(x => x.id === item.id);
           if (!pending || prev.active.some(x => x.id === item.id)) return prev;
