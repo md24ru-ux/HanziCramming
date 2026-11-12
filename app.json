@@ -1,4 +1,4 @@
-{
+﻿{
   "expo": {
     "name": "HanziCramming",
     "slug": "hanzicramming",
@@ -23,12 +23,18 @@
       "bundler": "metro",
       "output": "static"
     },
-    "plugins": ["expo-router", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-web-browser"
+    ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "a3ed3c6c-a000-44e3-976d-3ce648ccc656"
+      }
     }
   }
 }
