@@ -100,35 +100,94 @@ export function usePractice() {
   }, [ready, data.waiting.length, retryWaiting]);
 
   const addCharacter = useCallback(async (rawHanzi: string, manualPinyin = '', manualMeaning = '') => {
-    const hanzi = Array.from(rawHanzi.trim())[0] ?? '';
-    if (!hanzi || !/[\u3400-\u9FFF]/u.test(hanzi)) { setNotice('Введите один китайский иероглиф.'); return 'invalid'; }
-    if (data.active.some(x => x.id === hanzi)) { setData(p => ({ ...p, currentId: hanzi })); setNotice('Этот иероглиф уже есть в личном словаре.'); return 'exists'; }
-    if (data.waiting.some(x => x.id === hanzi)) { setNotice('Этот иероглиф уже находится в списке ожидания.'); return 'pending'; }
-    const known = dictionaryLookup(hanzi);
-    const pinyin = known?.pinyin ?? manualPinyin.trim();
-    const meaning = known?.meaning ?? manualMeaning.trim();
-    if (!pinyin || !meaning) { setNotice('Для нового иероглифа укажите пиньинь и перевод.'); return 'details'; }
-    const net = await NetInfo.fetch();
-    if (!net.isConnected) {
-      const item: WaitingEntry = { id: hanzi, hanzi, pinyin, meaning, reason: 'offline', addedAt: Date.now() };
-      setData(p => ({ ...p, waiting: [...p.waiting, item] }));
+    // Keep the full input intact for Chinese IME composition, then process each Hanzi separately.
+    const characters = Array.from(rawHanzi.trim()).filter(char => /[\\u3400-\\u9FFF]/u.test(char));
+    if (!characters.length) {
+      setNotice('Введите китайский иероглиф или слово.');
+      return 'invalid';
+    }
+
+    const canUseManualDetails = characters.length === 1;
+    const active = [...data.active];
+    const waiting = [...data.waiting];
+    let addedCount = 0;
+    let offlineCount = 0;
+    let missingCount = 0;
+    let existsCount = 0;
+    let needsDetails = false;
+    let selectedId: string | null = null;
+
+    for (const hanzi of characters) {
+      if (active.some(x => x.id === hanzi)) {
+        existsCount += 1;
+        selectedId ??= hanzi;
+        continue;
+      }
+      if (waiting.some(x => x.id === hanzi)) {
+        existsCount += 1;
+        continue;
+      }
+
+      const known = dictionaryLookup(hanzi);
+      const pinyin = known?.pinyin ?? (canUseManualDetails ? manualPinyin.trim() : '');
+      const meaning = known?.meaning ?? (canUseManualDetails ? manualMeaning.trim() : '');
+      if (!pinyin || !meaning) {
+        needsDetails = true;
+        continue;
+      }
+
+      try {
+        const net = await NetInfo.fetch();
+        if (!net.isConnected) throw new Error(offlineMessage);
+        await loadShape(hanzi);
+        const entry = makeEntry(hanzi, pinyin, meaning);
+        active.push(entry);
+        addedCount += 1;
+        selectedId ??= entry.id;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        const offline = message === offlineMessage || message === 'NETWORK_UNAVAILABLE' || !(await NetInfo.fetch()).isConnected;
+        waiting.push({
+          id: hanzi, hanzi, pinyin, meaning,
+          reason: offline ? 'offline' : 'missing',
+          addedAt: Date.now(),
+        });
+        if (offline) offlineCount += 1;
+        else missingCount += 1;
+      }
+    }
+
+    if (addedCount || offlineCount || missingCount) {
+      setData(prev => ({
+        ...prev,
+        active,
+        waiting,
+        currentId: selectedId && active.some(x => x.id === selectedId) ? selectedId : prev.currentId,
+      }));
+    } else if (selectedId) {
+      setData(prev => ({ ...prev, currentId: selectedId }));
+    }
+
+    if (needsDetails) {
+      setNotice(characters.length > 1
+        ? 'Некоторые иероглифы отсутствуют в словаре. Добавьте каждый такой знак отдельно, указав его пиньинь и перевод.'
+        : 'Для нового иероглифа укажите пиньинь и перевод.');
+      return 'details';
+    }
+    if (offlineCount) {
       setNotice(offlineMessage);
       return 'offline';
     }
-    try {
-      await loadShape(hanzi);
-      const entry = makeEntry(hanzi, pinyin, meaning);
-      setData(p => ({ ...p, active: [...p.active, entry], currentId: entry.id }));
-      setNotice('Иероглиф добавлен. Можно начинать тренировку.');
-      return 'added';
-    } catch (e) {
-      const message = e instanceof Error ? e.message : '';
-      const offline = message === offlineMessage || message === 'NETWORK_UNAVAILABLE' || !(await NetInfo.fetch()).isConnected;
-      const item: WaitingEntry = { id: hanzi, hanzi, pinyin, meaning, reason: offline ? 'offline' : 'missing', addedAt: Date.now() };
-      setData(p => ({ ...p, waiting: [...p.waiting, item] }));
-      setNotice(offline ? offlineMessage : missingMessage);
-      return offline ? 'offline' : 'missing';
+    if (missingCount) {
+      setNotice(missingMessage);
+      return 'missing';
     }
+    if (addedCount) {
+      setNotice(addedCount === 1 ? 'Иероглиф добавлен. Можно начинать тренировку.' : `Добавлено иероглифов: ${addedCount}. Каждый доступен для отдельной тренировки.`);
+      return 'added';
+    }
+    setNotice('Эти иероглифы уже есть в личном словаре или списке ожидания.');
+    return existsCount ? 'exists' : 'invalid';
   }, [data.active, data.waiting]);
 
   const selectCharacter = useCallback((id: string) => {
