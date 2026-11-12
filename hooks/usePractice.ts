@@ -164,7 +164,7 @@ export function usePractice() {
       const updated: PersonalEntry = { ...item, streak, attempts: item.attempts + 1, successes: item.successes + (correct && !usedHint ? 1 : 0), mastered: streak >= 10, lastPracticed: Date.now() };
       const active = prev.active.map(x => x.id === item.id ? updated : x);
       const next = active.find(x => !x.mastered && x.id !== item.id) ?? (updated.mastered ? active.find(x => !x.mastered) : updated);
-      return { ...prev, active, currentId: next?.id ?? updated.id };
+      return { ...prev, active, currentId: correct ? (next?.id ?? updated.id) : item.id };
     });
   }, [character, usedHint]);
 
