@@ -114,13 +114,14 @@ export function usePractice() {
     let offlineCount = 0;
     let missingCount = 0;
     let existsCount = 0;
-    let needsDetails = false;
+    const needsDetails: string[] = [];
     let selectedId: string | null = null;
+    let existingId: string | null = null;
 
     for (const hanzi of characters) {
       if (active.some(x => x.id === hanzi)) {
         existsCount += 1;
-        selectedId ??= hanzi;
+        existingId ??= hanzi;
         continue;
       }
       if (waiting.some(x => x.id === hanzi)) {
@@ -132,7 +133,7 @@ export function usePractice() {
       const pinyin = known?.pinyin ?? (canUseManualDetails ? manualPinyin.trim() : '');
       const meaning = known?.meaning ?? (canUseManualDetails ? manualMeaning.trim() : '');
       if (!pinyin || !meaning) {
-        needsDetails = true;
+        needsDetails.push(hanzi);
         continue;
       }
 
@@ -164,14 +165,16 @@ export function usePractice() {
         waiting,
         currentId: selectedId && active.some(x => x.id === selectedId) ? selectedId : prev.currentId,
       }));
-    } else if (selectedId) {
-      setData(prev => ({ ...prev, currentId: selectedId }));
+    } else {
+      const fallbackId = selectedId ?? existingId;
+      if (fallbackId) setData(prev => ({ ...prev, currentId: fallbackId }));
     }
 
-    if (needsDetails) {
-      setNotice(characters.length > 1
-        ? 'Некоторые иероглифы отсутствуют в словаре. Добавьте каждый такой знак отдельно, указав его пиньинь и перевод.'
-        : 'Для нового иероглифа укажите пиньинь и перевод.');
+    if (needsDetails.length) {
+      const list = needsDetails.join('、');
+      setNotice(needsDetails.length > 1
+        ? `Не удалось автоматически определить пиньинь и перевод для знаков: ${list}. Добавьте каждый из них отдельно, указав его данные.`
+        : `Для иероглифа ${list} не удалось автоматически определить пиньинь и перевод. Введите их вручную и добавьте этот знак отдельно.`);
       return 'details';
     }
     if (offlineCount) {
