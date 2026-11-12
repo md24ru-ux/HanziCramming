@@ -268,8 +268,15 @@ qualities: `好|hǎo|хороший|今天天气很好。|Jīntiān tiānqì hě
 忙|máng|занятый|今天我很忙。|Jīntiān wǒ hěn máng.|Сегодня я очень занят.
 累|lèi|уставший|我很累。|Wǒ hěn lèi.|Я очень устал.`,
 };
-export const characters: Character[] = categories.flatMap(category => rows[category.id].split('\n').map(row => {
+const baseCharacters: Character[] = categories.flatMap(category => rows[category.id].split('\n').map(row => {
   const [hanzi, pinyin, meaning, example, examplePinyin, exampleMeaning] = row.split('|');
   return { id: hanzi, categoryId: category.id, hanzi, pinyin, meaning, example, examplePinyin, exampleMeaning };
 }));
+
+// Additional common characters that are useful in words beyond the core starter set.
+const extraCharacters: Character[] = [
+  { id: '程', categoryId: 'study', hanzi: '程', pinyin: 'chéng', meaning: 'путь; процесс; этап (в составе 工程)', example: '工程师在工作。', examplePinyin: 'Gōngchéngshī zài gōngzuò.', exampleMeaning: 'Инженер работает.' },
+];
+
+export const characters: Character[] = [...baseCharacters, ...extraCharacters];
 export function getTopicCharacters(categoryId: string): Character[] { return characters.filter(item => item.categoryId === categoryId); }
