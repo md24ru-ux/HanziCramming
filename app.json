@@ -1,40 +1,26 @@
-﻿{
+{
   "expo": {
-    "name": "HanziCramming",
-    "slug": "hanzicramming",
+    "name": "HanziCramming2",
+    "slug": "hanzicramming2",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "hanzicramming",
+    "scheme": "hanzicramming2",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "icon": "./HanziCramming.png",
-    "ios": {
-      "supportsTablet": true
-    },
+    "ios": {"supportsTablet": true},
     "android": {
-      "package": "com.md24ru.hanzicramming",
+      "package": "com.md24ru.hanzicramming2",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./HanziCramming.png",
         "backgroundColor": "#FFFFFF"
       }
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static"
-    },
-    "plugins": [
-      "expo-router",
-      "expo-web-browser"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "a3ed3c6c-a000-44e3-976d-3ce648ccc656"
-      }
-    }
+    "web": {"bundler": "metro", "output": "static"},
+    "plugins": ["expo-router", "expo-web-browser"],
+    "experiments": {"typedRoutes": true},
+    "extra": {"router": {}},
+    "owner": "md24ru"
   }
 }
