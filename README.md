@@ -24,3 +24,19 @@ npx expo start
 ```
 
 Перед первой сборкой Android нужно установить зависимости и проверить проект в Expo Go. APK ещё не собирался и не проходил проверку на устройстве.
+
+
+## HanziCramming2 (geometry-only handwriting evaluator)
+
+Development branch: `feature/cramming2`.
+
+This branch has a separate Expo app identity (`HanziCramming2`, Android package `com.md24ru.hanzicramming2`) and uses the same writing board/reference data flow as HanziCramming. Stroke evaluation has been replaced with a geometry-only matcher:
+
+- stroke count must match;
+- the complete user character is normalized by translation and uniform scale only (no rotation or separate X/Y stretching);
+- strokes are globally matched one-to-one using minimum total geometric error;
+- each matched stroke is compared in both directions, so stroke direction is ignored;
+- order and direction are not correctness conditions;
+- stroke shape, endpoints, and length are scored, with the worst matched stroke determining the verdict.
+
+The existing drawing board, reference source, personal dictionary, and review flow remain unchanged in this branch. This is a development build; device/browser testing and a new EAS project association are still required before producing a test APK.
