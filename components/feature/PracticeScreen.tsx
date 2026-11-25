@@ -37,7 +37,7 @@ export function PracticeScreen() {
 
   const add = async () => {
     const result = await practice.addCharacter(hanzi, pinyin, meaning);
-    if (result === 'added' || result === 'offline' || result === 'missing' || result === 'exists' || result === 'pending') {
+    if (result === 'added' || result === 'offline' || result === 'missing' || result === 'exists') {
       setHanzi(''); setPinyin(''); setMeaning('');
     }
   };
@@ -66,19 +66,19 @@ export function PracticeScreen() {
 
       <View style={styles.addPanel}>
         <View style={styles.addRow}>
-          <TextInput value={hanzi} onChangeText={setHanzi} placeholder="Иероглиф или слово" placeholderTextColor={theme.colors.subtle} style={styles.hanziInput} multiline={false} numberOfLines={1} ellipsizeMode="tail" />
+          <TextInput value={hanzi} onChangeText={setHanzi} placeholder="Иероглиф или слово" placeholderTextColor={theme.colors.subtle} style={styles.hanziInput} multiline={false} numberOfLines={1} />
           <Pressable accessibilityRole="button" onPress={add} disabled={!hanzi.trim() || !practice.ready} style={[styles.addButton, (!hanzi.trim() || !practice.ready) && styles.disabled]}>
             <Ionicons name="add" size={20} color={theme.colors.white} /><Text style={styles.addButtonText} numberOfLines={1}>Добавить</Text>
           </Pressable>
         </View>
         <View style={styles.detailRow}>
-          <TextInput value={pinyin} onChangeText={setPinyin} placeholder="Пиньинь" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} autoCapitalize="none" multiline={false} numberOfLines={1} ellipsizeMode="tail" />
-          <TextInput value={meaning} onChangeText={setMeaning} placeholder="Перевод" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} multiline={false} numberOfLines={1} ellipsizeMode="tail" />
+          <TextInput value={pinyin} onChangeText={setPinyin} placeholder="Пиньинь" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} autoCapitalize="none" multiline={false} numberOfLines={1} />
+          <TextInput value={meaning} onChangeText={setMeaning} placeholder="Перевод" placeholderTextColor={theme.colors.subtle} style={styles.detailInput} multiline={false} numberOfLines={1} />
         </View>
         <Text style={styles.inputHint}>Пиньинь и перевод заполняются автоматически, если иероглиф есть в словаре.</Text>
       </View>
 
-      {practice.notice ? <Text accessibilityLiveRegion="polite" numberOfLines={1} ellipsizeMode="tail" style={styles.notice}>{practice.notice}</Text> : null}
+      {practice.notice ? <Text accessibilityLiveRegion="polite" numberOfLines={1} style={styles.notice}>{practice.notice}</Text> : null}
       {practice.storageError ? <Text numberOfLines={1} style={styles.storageWarning}>{practice.storageError}</Text> : null}
 
       <WordPanel character={practice.character} onReveal={practice.markCharacterRevealed} onPinyinShown={practice.markPinyinShown} hintStatus={practice.hintStatus} />
