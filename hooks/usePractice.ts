@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { CharacterShape, evaluateWriting, loadShape, Point } from '@/services/strokes';
@@ -238,6 +240,26 @@ export function usePractice() {
   const markCharacterRevealed = useCallback(() => { setCharacterRevealed(true); setUsedHint(true); }, []);
   const markPinyinShown = useCallback(() => { setPinyinShown(true); setUsedHint(true); }, []);
 
+  const exportDiagnostics = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem('hc2:diagnostic-log:v1');
+      const entries = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(entries) || entries.length === 0) {
+        Alert.alert('Диагностика', 'Пока нет сохранённых попыток. Сначала выполните и проверьте хотя бы один иероглиф.');
+        return;
+      }
+      const report = {
+        exportedAt: new Date().toISOString(),
+        recordCount: entries.length,
+        entries,
+      };
+      Clipboard.setString(JSON.stringify(report, null, 2));
+      Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Теперь вставьте содержимое буфера обмена в сообщение.`);
+    } catch {
+      Alert.alert('Ошибка экспорта', 'Не удалось прочитать диагностические записи.');
+    }
+  }, []);
+
   const check = useCallback(() => {
     if (awaitingRetry) { retry(); return; }
     if (!shape || checking || !strokes.length || live.current.length) return;
@@ -301,7 +323,7 @@ export function usePractice() {
     mastered: data.active.filter(x => x.mastered).length, totalMastered: data.active.filter(x => x.mastered).length,
     streak: character?.streak ?? 0, attemptCount, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], boardScale,
     activeCharacters: data.active, waitingCharacters: data.waiting, activeCount: data.active.length, waitingCount: data.waiting.length,
-    notice, clearNotice: () => setNotice(''), addCharacter, selectCharacter, retryWaiting,
+    notice, clearNotice: () => setNotice(''), addCharacter, selectCharacter, retryWaiting, exportDiagnostics,
     beginStroke, moveStroke, endStroke, cancelStroke: () => { live.current = []; setLiveStroke([]); },
     toggleHint, clear, check, retryLoad, cycleTolerance, selectTolerance, resizeBoard, setBoardScale, markCharacterRevealed, markPinyinShown, hintStatus,
     selectMode: () => undefined, selectCategory: () => undefined,
