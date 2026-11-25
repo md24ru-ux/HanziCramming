@@ -230,7 +230,7 @@ export function usePractice() {
     });
   }, [character, usedHint]);
 
-  const markCharacterRevealed = useCallback(() => setCharacterRevealed(true), []);\n  const markPinyinShown = useCallback(() => setPinyinShown(true), []);\n\n  const check = useCallback(() => {
+  const markCharacterRevealed = useCallback(() => { setCharacterRevealed(true); setUsedHint(true); }, []);\n  const markPinyinShown = useCallback(() => { setPinyinShown(true); setUsedHint(true); }, []);\n\n  const check = useCallback(() => {
     if (awaitingRetry) { retry(); return; }
     if (!shape || checking || !strokes.length || live.current.length) return;
     const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);\n    const diagnostic = { timestamp: new Date().toISOString(), algorithmVersion: 'geometry-v1', appVersion: '1.0.0', character: character?.hanzi, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], strokes, referenceMedians: shape.medians, correct: verdict.correct, deviation: verdict.deviation, message: verdict.message, drawingHintUsed: usedHint, pinyinShown, characterRevealed };\n    AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);

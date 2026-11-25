@@ -89,7 +89,7 @@ export function PracticeScreen() {
       </View> : null}
 
       <View style={styles.modeRow}>
-        <Text style={styles.modeLabel}>Строгость</Text>
+        <Text style={styles.modeEmoji}>{practice.hintStatus === 'red' ? '😞' : practice.hintStatus === 'yellow' ? '😐' : '😊'}</Text><Text style={styles.modeLabel}>Строгость</Text>
         {(['L','M','H'] as const).map(mode => <Pressable key={mode} onPress={() => practice.selectTolerance(mode)} style={[styles.modeButton, practice.toleranceMode === mode && styles.modeSelected]}>
           <Text style={[styles.modeText, practice.toleranceMode === mode && styles.modeTextSelected]}>{mode}</Text>
         </Pressable>)}
@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
   retryWaiting: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'flex-end' },
   modeLabel: { color: theme.colors.subtle, fontSize: theme.font.tiny, marginRight: 4 },
+  modeEmoji: { fontSize: 18, marginRight: 2 },
   modeButton: { width: 30, height: 27, borderRadius: 6, backgroundColor: theme.colors.surfaceTint, alignItems: 'center', justifyContent: 'center' },
   modeSelected: { backgroundColor: theme.colors.primary },
   modeText: { color: theme.colors.primary, fontWeight: '700', fontSize: 12 },
