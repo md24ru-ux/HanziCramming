@@ -109,6 +109,14 @@ export async function flushPendingDiagnostics(
       }
 
       let madeProgress = false;
+      const hasEligibleOverflow = Array.from(groups.entries()).some(([version, records]) => {
+        const eligible =
+          options.manual === true ||
+          options.force === true ||
+          version !== CURRENT_DIAGNOSTIC_ALGORITHM ||
+          records.length >= (options.minimumAttempts ?? 5);
+        return eligible && records.length > 100;
+      });
       for (const [version, records] of groups) {
         const isOldVersion = version !== CURRENT_DIAGNOSTIC_ALGORITHM;
         const eligible =
@@ -134,7 +142,7 @@ export async function flushPendingDiagnostics(
         }
       }
 
-      if (lastError || !madeProgress || !options.manual) break;
+      if (lastError || !madeProgress || (!options.manual && !options.force && !hasEligibleOverflow)) break;
     }
   } catch (error) {
     lastError = error instanceof Error ? error.message : 'Не удалось прочитать очередь диагностики.';
