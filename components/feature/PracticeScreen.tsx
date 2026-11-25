@@ -55,13 +55,19 @@ export function PracticeScreen() {
           <View style={styles.brandMark}><Text style={styles.brandCharacter}>汉</Text></View>
           <View><Text style={styles.brandTitle}>HanziCramming</Text><Text style={styles.brandSubtitle}>ЛИЧНЫЙ СЛОВАРЬ И ТРЕНИРОВКА</Text></View>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Открыть список для повторения" onPress={() => setReviewVisible(true)} disabled={!practice.activeCount} style={[styles.progress, !practice.activeCount && styles.disabled]}>
-          <Ionicons name="leaf-outline" size={17} color={theme.colors.primary} />
-          <View style={styles.progressLabels}>
-            <Text style={styles.reviewLabel}>Повторение</Text>
-            <Text style={styles.progressText}>{practice.totalMastered} / {practice.activeCount}</Text>
-          </View>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Скопировать диагностические записи" onPress={practice.exportDiagnostics} style={styles.diagnosticButton}>
+            <Ionicons name="clipboard-outline" size={16} color={theme.colors.primary} />
+            <Text style={styles.diagnosticText}>Диагностика</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Открыть список для повторения" onPress={() => setReviewVisible(true)} disabled={!practice.activeCount} style={[styles.progress, !practice.activeCount && styles.disabled]}>
+            <Ionicons name="leaf-outline" size={17} color={theme.colors.primary} />
+            <View style={styles.progressLabels}>
+              <Text style={styles.reviewLabel}>Повторение</Text>
+              <Text style={styles.progressText}>{practice.totalMastered} / {practice.activeCount}</Text>
+            </View>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.addPanel}>
@@ -161,6 +167,9 @@ const styles = StyleSheet.create({
   brandCharacter: { fontSize: 24, color: theme.colors.white },
   brandTitle: { fontSize: 19, fontWeight: '700', color: theme.colors.ink },
   brandSubtitle: { fontSize: 8, color: theme.colors.subtle, letterSpacing: 0.6 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  diagnosticButton: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.surfaceTint, paddingHorizontal: 8, paddingVertical: 7, borderRadius: theme.radius.pill },
+  diagnosticText: { color: theme.colors.primary, fontSize: 10, fontWeight: '600' },
   progress: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.primarySoft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: theme.radius.pill, marginLeft: 6 },
   progressLabels: { alignItems: 'center' },
   reviewLabel: { color: theme.colors.primary, fontWeight: '600', fontSize: 10 },
