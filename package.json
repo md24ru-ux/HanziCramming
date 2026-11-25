@@ -63,7 +63,8 @@
     "semver": "^7.6.0",
     "tslib": "2.6.2",
     "zustand": "^5.0.2",
-    "expo-clipboard": "~7.1.5"
+    "expo-clipboard": "~7.1.5",
+    "expo-sqlite": "~15.2.14"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
