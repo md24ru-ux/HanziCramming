@@ -36,6 +36,8 @@ export function usePractice() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [notice, setNotice] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionId = useRef<string | null>(null);
+  if (!sessionId.current) sessionId.current = `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const character = data.active.find(x => x.id === data.currentId) ?? null;
 
   useEffect(() => {
@@ -240,7 +242,40 @@ export function usePractice() {
     if (awaitingRetry) { retry(); return; }
     if (!shape || checking || !strokes.length || live.current.length) return;
     const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);
-    const diagnostic = { timestamp: new Date().toISOString(), algorithmVersion: 'geometry-v1', appVersion: '1.0.0', character: character?.hanzi, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], strokes, referenceMedians: shape.medians, correct: verdict.correct, deviation: verdict.deviation, message: verdict.message, drawingHintUsed: usedHint, pinyinShown, characterRevealed };
+    const diagnostic = {
+      attemptId: `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      timestamp: new Date().toISOString(),
+      sessionId: sessionId.current,
+      schemaVersion: '1',
+      algorithmVersion: 'geometry-v1',
+      appVersion: '1.0.0',
+      character: character?.hanzi ?? null,
+      toleranceMode,
+      toleranceLimit: toleranceValues[toleranceMode],
+      conditions: {
+        drawingHintUsed: usedHint,
+        pinyinShown,
+        characterRevealed
+      },
+      input: {
+        userStrokes: strokes.map(stroke => stroke.map(point => ({ x: point.x, y: point.y }))),
+        referencePaths: [...shape.strokes],
+        referenceMedians: shape.medians.map(stroke => stroke.map(point => [...point])),
+        userStrokeCount: strokes.length,
+        referenceStrokeCount: shape.medians.length
+      },
+      evaluation: {
+        correct: verdict.correct,
+        deviation: verdict.deviation,
+        message: verdict.message,
+        ...verdict.diagnostics
+      },
+      result: {
+        correct: verdict.correct,
+        deviation: verdict.deviation,
+        message: verdict.message
+      }
+    };
     AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);
     setAttemptCount(p => p + 1);
     setFeedback(verdict.message); setFlash(verdict.correct ? 'success' : 'error');
