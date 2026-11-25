@@ -328,7 +328,7 @@ export function usePractice() {
         entries,
       };
       await Clipboard.setStringAsync(JSON.stringify(report, null, 2));
-      Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Временный экспорт через буфер обмена будет заменён отправкой в GitHub после настройки сервиса.`);
+      Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Файл JSON скопирован в буфер обмена.`);
     } catch {
       Alert.alert('Ошибка экспорта', 'Не удалось прочитать диагностические записи из локальной базы.');
     }
@@ -376,7 +376,7 @@ export function usePractice() {
       .then(async () => {
         sessionAttemptCount.current += 1;
         await refreshDiagnosticStats();
-        await checkDiagnosticUploadThreshold();
+        try { await checkDiagnosticUploadThreshold(); } catch { /* Upload failure keeps the record queued. */ }
         await refreshDiagnosticStats();
       })
       .catch(() => { setNotice('Не удалось сохранить диагностическую запись. Проверка и обучение продолжаются.'); });
