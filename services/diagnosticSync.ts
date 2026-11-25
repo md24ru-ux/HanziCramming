@@ -74,10 +74,16 @@ export async function flushPendingDiagnostics(
   }
 
   if (!hasBackendConfiguration()) {
+    let remaining = 0;
+    try {
+      remaining = (await getPendingDiagnosticAttempts(500)).length;
+    } catch {
+      // The configuration error is more useful than a secondary read error.
+    }
     return {
       sent: 0,
       batches: 0,
-      remaining: 0,
+      remaining,
       error: 'Не настроено подключение к промежуточному сервису диагностики.',
     };
   }
