@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import { getAllDiagnosticAttempts, initializeDiagnosticStore, saveDiagnosticAttempt } from '@/services/diagnosticStore';
 import { CharacterShape, evaluateWriting, loadShape, Point } from '@/services/strokes';
 import { DictionaryData, PersonalEntry, WaitingEntry, dictionaryLookup, loadPersonalDictionary, makeEntry, savePersonalDictionary } from '@/services/personalDictionary';
 
@@ -44,6 +45,9 @@ export function usePractice() {
 
   useEffect(() => {
     let active = true;
+    initializeDiagnosticStore()
+      .then(() => AsyncStorage.removeItem('hc2:diagnostic-log:v1'))
+      .catch(() => { if (active) setNotice('Не удалось подготовить локальное хранилище диагностики. Проверка и обучение доступны.'); });
     Promise.all([loadPersonalDictionary(), AsyncStorage.getItem(settingsKey)]).then(([saved, rawSettings]) => {
       if (!active) return;
       setData(saved);
@@ -242,9 +246,8 @@ export function usePractice() {
 
   const exportDiagnostics = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem('hc2:diagnostic-log:v1');
-      const entries = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(entries) || entries.length === 0) {
+      const entries = await getAllDiagnosticAttempts();
+      if (!entries.length) {
         Alert.alert('Диагностика', 'Пока нет сохранённых попыток. Сначала выполните и проверьте хотя бы один иероглиф.');
         return;
       }
@@ -254,9 +257,9 @@ export function usePractice() {
         entries,
       };
       await Clipboard.setStringAsync(JSON.stringify(report, null, 2));
-      Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Теперь вставьте содержимое буфера обмена в сообщение.`);
+      Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Временный экспорт через буфер обмена будет заменён отправкой в GitHub после настройки сервиса.`);
     } catch {
-      Alert.alert('Ошибка экспорта', 'Не удалось прочитать диагностические записи.');
+      Alert.alert('Ошибка экспорта', 'Не удалось прочитать диагностические записи из локальной базы.');
     }
   }, []);
 
@@ -298,7 +301,7 @@ export function usePractice() {
         message: verdict.message
       }
     };
-    AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);
+    void saveDiagnosticAttempt(diagnostic).catch(() => { setNotice('Не удалось сохранить диагностическую запись. Проверка и обучение продолжаются.'); });
     setAttemptCount(p => p + 1);
     setFeedback(verdict.message); setFlash(verdict.correct ? 'success' : 'error');
     if (verdict.correct) {
