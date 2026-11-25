@@ -13,16 +13,15 @@ export const WordPanel = memo(function WordPanel({ character, onReveal, onPinyin
   if (!character) return <View style={styles.empty}><Text style={styles.emptyText}>Добавьте первый иероглиф в личный словарь</Text></View>;
   const reveal = () => { if (!revealed) { setRevealed(true); onReveal(); } };
   const toggleInfo = () => { setShowPinyin(p => { const next = !p; if (next) onPinyinShown(); return next; }); };
+  const emoji = hintStatus === 'red' ? '😞' : hintStatus === 'yellow' ? '😐' : '😊';
   return <View style={styles.wrapper}>
-    <View style={styles.characterBlock}>
-      <Pressable accessibilityRole="button" accessibilityLabel={revealed ? 'Иероглиф раскрыт' : 'Открыть иероглиф'} onPress={reveal}>
-        <Text adjustsFontSizeToFit minimumFontScale={0.6} numberOfLines={1} style={[styles.character, !revealed && styles.frosted]}>{revealed ? character.hanzi : '汉字'}</Text>
-        {!revealed ? <Text style={styles.frostedLabel}>Нажмите, чтобы открыть</Text> : null}
-      </Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={revealed ? 'Иероглиф раскрыт' : 'Открыть иероглиф'} onPress={reveal} style={styles.characterBlock}>
+      <Text adjustsFontSizeToFit minimumFontScale={0.6} numberOfLines={1} style={[styles.character, !revealed && styles.frosted]}>{revealed ? character.hanzi : '汉字'}</Text>
+      {!revealed ? <Text style={styles.frostedLabel}>Нажмите, чтобы открыть</Text> : null}
       <Pressable accessibilityRole="button" accessibilityLabel={`Прослушать произношение ${character.hanzi}`} onPress={() => { Speech.stop(); Speech.speak(character.hanzi, { language: 'zh-CN', rate: 0.82 }); }} style={styles.speakButton}>
         <Ionicons name="volume-high-outline" size={19} color={theme.colors.primary} />
       </Pressable>
-    </View>
+    </Pressable>
     <View style={styles.details}>
       <Pressable accessibilityRole="button" onPress={toggleInfo} style={styles.infoToggle}>
         <Text style={styles.infoText}>{showPinyin ? character.pinyin : character.meaning}</Text>

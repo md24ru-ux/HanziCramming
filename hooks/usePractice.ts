@@ -22,7 +22,10 @@ export function usePractice() {
   const [liveStroke, setLiveStroke] = useState<Point[]>([]);
   const live = useRef<Point[]>([]);
   const [hint, setHint] = useState(false);
-  const [usedHint, setUsedHint] = useState(false);\n  const [characterRevealed, setCharacterRevealed] = useState(false);\n  const [pinyinShown, setPinyinShown] = useState(false);\n  const hintStatus = characterRevealed ? 'red' : pinyinShown ? 'yellow' : 'green';
+  const [usedHint, setUsedHint] = useState(false);
+  const [characterRevealed, setCharacterRevealed] = useState(false);
+  const [pinyinShown, setPinyinShown] = useState(false);
+  const hintStatus = characterRevealed ? 'red' : pinyinShown ? 'yellow' : 'green';
   const [checking, setChecking] = useState(false);
   const [awaitingRetry, setAwaitingRetry] = useState(false);
   const [flash, setFlash] = useState<'success' | 'error' | null>(null);
@@ -230,16 +233,21 @@ export function usePractice() {
     });
   }, [character, usedHint]);
 
-  const markCharacterRevealed = useCallback(() => { setCharacterRevealed(true); setUsedHint(true); }, []);\n  const markPinyinShown = useCallback(() => { setPinyinShown(true); setUsedHint(true); }, []);\n\n  const check = useCallback(() => {
+  const markCharacterRevealed = useCallback(() => { setCharacterRevealed(true); setUsedHint(true); }, []);
+  const markPinyinShown = useCallback(() => { setPinyinShown(true); setUsedHint(true); }, []);
+
+  const check = useCallback(() => {
     if (awaitingRetry) { retry(); return; }
     if (!shape || checking || !strokes.length || live.current.length) return;
-    const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);\n    const diagnostic = { timestamp: new Date().toISOString(), algorithmVersion: 'geometry-v1', appVersion: '1.0.0', character: character?.hanzi, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], strokes, referenceMedians: shape.medians, correct: verdict.correct, deviation: verdict.deviation, message: verdict.message, drawingHintUsed: usedHint, pinyinShown, characterRevealed };\n    AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);
+    const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);
+    const diagnostic = { timestamp: new Date().toISOString(), algorithmVersion: 'geometry-v1', appVersion: '1.0.0', character: character?.hanzi, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], strokes, referenceMedians: shape.medians, correct: verdict.correct, deviation: verdict.deviation, message: verdict.message, drawingHintUsed: usedHint, pinyinShown, characterRevealed };
+    AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);
     setAttemptCount(p => p + 1);
     setFeedback(verdict.message); setFlash(verdict.correct ? 'success' : 'error');
     if (verdict.correct) {
       setChecking(true);
       timer.current = setTimeout(() => {
-        clearInk(); setHint(false); setUsedHint(false); setFlash(null); setChecking(false); submit(true);
+        clearInk(); setHint(false); setFlash(null); setChecking(false); submit(true); setUsedHint(false);
       }, 700);
     } else {
       setAwaitingRetry(true);
