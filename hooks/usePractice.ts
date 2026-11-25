@@ -22,7 +22,7 @@ export function usePractice() {
   const [liveStroke, setLiveStroke] = useState<Point[]>([]);
   const live = useRef<Point[]>([]);
   const [hint, setHint] = useState(false);
-  const [usedHint, setUsedHint] = useState(false);
+  const [usedHint, setUsedHint] = useState(false);\n  const [characterRevealed, setCharacterRevealed] = useState(false);\n  const [pinyinShown, setPinyinShown] = useState(false);\n  const hintStatus = characterRevealed ? 'red' : pinyinShown ? 'yellow' : 'green';
   const [checking, setChecking] = useState(false);
   const [awaitingRetry, setAwaitingRetry] = useState(false);
   const [flash, setFlash] = useState<'success' | 'error' | null>(null);
@@ -54,7 +54,7 @@ export function usePractice() {
   const clearInk = useCallback(() => { live.current = []; setLiveStroke([]); setStrokes([]); }, []);
   const resetSession = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    setChecking(false); setAwaitingRetry(false); setFlash(null); clearInk(); setHint(false); setUsedHint(false); setFeedback(''); setShape(null); setLoadError('');
+    setChecking(false); setAwaitingRetry(false); setFlash(null); clearInk(); setHint(false); setUsedHint(false); setCharacterRevealed(false); setPinyinShown(false); setFeedback(''); setShape(null); setLoadError('');
   }, [clearInk]);
 
   const loadReference = useCallback(async (hanzi: string) => {
@@ -230,10 +230,10 @@ export function usePractice() {
     });
   }, [character, usedHint]);
 
-  const check = useCallback(() => {
+  const markCharacterRevealed = useCallback(() => setCharacterRevealed(true), []);\n  const markPinyinShown = useCallback(() => setPinyinShown(true), []);\n\n  const check = useCallback(() => {
     if (awaitingRetry) { retry(); return; }
     if (!shape || checking || !strokes.length || live.current.length) return;
-    const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);
+    const verdict = evaluateWriting(strokes, shape, toleranceValues[toleranceMode]);\n    const diagnostic = { timestamp: new Date().toISOString(), algorithmVersion: 'geometry-v1', appVersion: '1.0.0', character: character?.hanzi, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], strokes, referenceMedians: shape.medians, correct: verdict.correct, deviation: verdict.deviation, message: verdict.message, drawingHintUsed: usedHint, pinyinShown, characterRevealed };\n    AsyncStorage.getItem('hc2:diagnostic-log:v1').then(raw => { const entries = raw ? JSON.parse(raw) : []; entries.push(diagnostic); return AsyncStorage.setItem('hc2:diagnostic-log:v1', JSON.stringify(entries)); }).catch(() => undefined);
     setAttemptCount(p => p + 1);
     setFeedback(verdict.message); setFlash(verdict.correct ? 'success' : 'error');
     if (verdict.correct) {
@@ -245,7 +245,7 @@ export function usePractice() {
       setAwaitingRetry(true);
       submit(false);
     }
-  }, [awaitingRetry, retry, shape, checking, strokes, toleranceMode, clearInk, submit]);
+  }, [awaitingRetry, retry, shape, checking, strokes, toleranceMode, clearInk, submit, character, usedHint, pinyinShown, characterRevealed]);
 
   const setBoardScale = useCallback((scale: number) => setBoardScaleState(p => Math.max(0.6, Math.min(0.9, scale))), []);
   const resizeBoard = useCallback((factor: number) => setBoardScaleState(p => Math.max(0.6, Math.min(0.9, p * factor))), []);
@@ -260,7 +260,7 @@ export function usePractice() {
     activeCharacters: data.active, waitingCharacters: data.waiting, activeCount: data.active.length, waitingCount: data.waiting.length,
     notice, clearNotice: () => setNotice(''), addCharacter, selectCharacter, retryWaiting,
     beginStroke, moveStroke, endStroke, cancelStroke: () => { live.current = []; setLiveStroke([]); },
-    toggleHint, clear, check, retryLoad, cycleTolerance, selectTolerance, resizeBoard, setBoardScale,
+    toggleHint, clear, check, retryLoad, cycleTolerance, selectTolerance, resizeBoard, setBoardScale, markCharacterRevealed, markPinyinShown, hintStatus,
     selectMode: () => undefined, selectCategory: () => undefined,
   };
 }

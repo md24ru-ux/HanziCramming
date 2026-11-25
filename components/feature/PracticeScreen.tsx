@@ -81,7 +81,7 @@ export function PracticeScreen() {
       {practice.notice ? <Text accessibilityLiveRegion="polite" numberOfLines={1} ellipsizeMode="tail" style={styles.notice}>{practice.notice}</Text> : null}
       {practice.storageError ? <Text numberOfLines={1} style={styles.storageWarning}>{practice.storageError}</Text> : null}
 
-      <WordPanel character={practice.character} />
+      <WordPanel character={practice.character} onReveal={practice.markCharacterRevealed} onPinyinShown={practice.markPinyinShown} hintStatus={practice.hintStatus} />
 
       {practice.waitingCount > 0 ? <View style={styles.waitingRow}>
         <Text numberOfLines={2} style={styles.waitingText}>Ожидают эталона: {practice.waitingCharacters.map(x => x.hanzi).join('、')}</Text>
@@ -89,7 +89,7 @@ export function PracticeScreen() {
       </View> : null}
 
       <View style={styles.modeRow}>
-        <Text style={styles.modeLabel}>Точность</Text>
+        <Text style={styles.modeLabel}>Строгость</Text>
         {(['L','M','H'] as const).map(mode => <Pressable key={mode} onPress={() => practice.selectTolerance(mode)} style={[styles.modeButton, practice.toleranceMode === mode && styles.modeSelected]}>
           <Text style={[styles.modeText, practice.toleranceMode === mode && styles.modeTextSelected]}>{mode}</Text>
         </Pressable>)}
