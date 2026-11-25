@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { CharacterShape, evaluateWriting, loadShape, Point } from '@/services/strokes';
@@ -253,7 +253,7 @@ export function usePractice() {
         recordCount: entries.length,
         entries,
       };
-      Clipboard.setString(JSON.stringify(report, null, 2));
+      await Clipboard.setStringAsync(JSON.stringify(report, null, 2));
       Alert.alert('Диагностика скопирована', `Записей: ${entries.length}. Теперь вставьте содержимое буфера обмена в сообщение.`);
     } catch {
       Alert.alert('Ошибка экспорта', 'Не удалось прочитать диагностические записи.');
