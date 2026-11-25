@@ -53,12 +53,15 @@ export function PracticeScreen() {
       <View style={styles.header}>
         <View style={styles.brand}>
           <View style={styles.brandMark}><Text style={styles.brandCharacter}>汉</Text></View>
-          <View><Text style={styles.brandTitle}>HanziCramming</Text><Text style={styles.brandSubtitle}>ЛИЧНЫЙ СЛОВАРЬ И ТРЕНИРОВКА</Text></View>
         </View>
         <View style={styles.headerActions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Скопировать диагностические записи" onPress={practice.exportDiagnostics} style={styles.diagnosticButton}>
-            <Ionicons name="clipboard-outline" size={16} color={theme.colors.primary} />
-            <Text style={styles.diagnosticText}>Диагностика</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Скопировать диагностику" onPress={practice.exportDiagnostics} style={styles.diagnosticButton}>
+            <Ionicons name="clipboard-outline" size={15} color={theme.colors.primary} />
+            <Text style={styles.diagnosticText}>diag</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Отправить диагностику (функция пока не подключена)" onPress={() => undefined} style={styles.diagnosticButton}>
+            <Ionicons name="arrow-up-outline" style={styles.sendArrow} size={15} color={theme.colors.primary} />
+            <Text style={styles.diagnosticText}>diag</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Открыть список для повторения" onPress={() => setReviewVisible(true)} disabled={!practice.activeCount} style={[styles.progress, !practice.activeCount && styles.disabled]}>
             <Ionicons name="leaf-outline" size={17} color={theme.colors.primary} />
@@ -162,15 +165,14 @@ const styles = StyleSheet.create({
   page: { flex: 1, width: '100%', maxWidth: 960, alignSelf: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, gap: theme.spacing.xs },
   compactPage: { paddingVertical: 3, gap: 3 },
   header: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1, minWidth: 0 },
+  brand: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 },
   brandMark: { width: 34, height: 34, backgroundColor: theme.colors.primary, borderRadius: theme.radius.sm, alignItems: 'center', justifyContent: 'center' },
   brandCharacter: { fontSize: 24, color: theme.colors.white },
-  brandTitle: { fontSize: 19, fontWeight: '700', color: theme.colors.ink },
-  brandSubtitle: { fontSize: 8, color: theme.colors.subtle, letterSpacing: 0.6 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  diagnosticButton: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.surfaceTint, paddingHorizontal: 8, paddingVertical: 7, borderRadius: theme.radius.pill },
+  diagnosticButton: { height: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: theme.colors.surfaceTint, paddingHorizontal: 8, borderRadius: theme.radius.pill },
   diagnosticText: { color: theme.colors.primary, fontSize: 10, fontWeight: '600' },
-  progress: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.primarySoft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: theme.radius.pill, marginLeft: 6 },
+  sendArrow: { transform: [{ rotate: '45deg' }] },
+  progress: { height: 34, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.primarySoft, paddingHorizontal: 10, borderRadius: theme.radius.pill, marginLeft: 0 },
   progressLabels: { alignItems: 'center' },
   reviewLabel: { color: theme.colors.primary, fontWeight: '600', fontSize: 10 },
   progressText: { color: theme.colors.primary, fontWeight: '700', fontSize: theme.font.small },
