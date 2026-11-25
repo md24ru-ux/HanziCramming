@@ -9,7 +9,7 @@ Deploy from the HC2 repository root:
 ```bash
 supabase link --project-ref YOUR_SUPABASE_PROJECT_REF
 supabase secrets set GITHUB_TOKEN=YOUR_FINE_GRAINED_GITHUB_TOKEN
-supabase secrets set GITHUB_REPOSITORY=OWNER/REPOSITORY
+supabase secrets set GITHUB_REPOSITORY=md24ru-ux/HanziCramming
 supabase secrets set GITHUB_BRANCH=main
 supabase secrets set GITHUB_REPORTS_PATH=diagnostic-reports
 supabase functions deploy diagnostic-reports
