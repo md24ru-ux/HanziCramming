@@ -25,7 +25,7 @@ export function usePractice() {
   const [usedHint, setUsedHint] = useState(false);
   const [characterRevealed, setCharacterRevealed] = useState(false);
   const [pinyinShown, setPinyinShown] = useState(false);
-  const hintStatus = characterRevealed ? 'red' : pinyinShown ? 'yellow' : 'green';
+  const hintStatus: 'green' | 'yellow' | 'red' = characterRevealed ? 'red' : pinyinShown ? 'yellow' : 'green';
   const [checking, setChecking] = useState(false);
   const [awaitingRetry, setAwaitingRetry] = useState(false);
   const [flash, setFlash] = useState<'success' | 'error' | null>(null);
