@@ -14,7 +14,6 @@
     "@expo/vector-icons": "^14.0.0",
     "@gorhom/bottom-sheet": "4.4.6",
     "@react-native-async-storage/async-storage": "2.1.2",
-    "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-community/slider": "4.5.6",
@@ -63,7 +62,8 @@
     "react-native-web": "~0.20.0",
     "semver": "^7.6.0",
     "tslib": "2.6.2",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "expo-clipboard": "~7.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
