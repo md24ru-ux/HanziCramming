@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { getAllDiagnosticAttempts, initializeDiagnosticStore, saveDiagnosticAttempt } from '@/services/diagnosticStore';
+import { getAllDiagnosticAttempts, getDiagnosticQueueStats, initializeDiagnosticStore, saveDiagnosticAttempt } from '@/services/diagnosticStore';
+import {
+  CURRENT_DIAGNOSTIC_ALGORITHM,
+  checkDiagnosticUploadThreshold,
+  finishDiagnosticSession,
+  retryEligibleDiagnosticUploads,
+  sendAllDiagnosticsNow,
+} from '@/services/diagnosticSync';
 import { CharacterShape, evaluateWriting, loadShape, Point } from '@/services/strokes';
 import { DictionaryData, PersonalEntry, WaitingEntry, dictionaryLookup, loadPersonalDictionary, makeEntry, savePersonalDictionary } from '@/services/personalDictionary';
 
@@ -37,16 +44,54 @@ export function usePractice() {
   const [boardScale, setBoardScaleState] = useState(0.9);
   const [attemptsLoaded, setAttemptsLoaded] = useState(true);
   const [attemptCount, setAttemptCount] = useState(0);
+  const [diagnosticPending, setDiagnosticPending] = useState(0);
+  const [diagnosticSyncing, setDiagnosticSyncing] = useState(false);
+  const sessionAttemptCount = useRef(0);
+  const appState = useRef(AppState.currentState);
   const [notice, setNotice] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionId = useRef<string | null>(null);
   if (!sessionId.current) sessionId.current = `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const character = data.active.find(x => x.id === data.currentId) ?? null;
 
+  const refreshDiagnosticStats = useCallback(async () => {
+    try {
+      const stats = await getDiagnosticQueueStats();
+      setDiagnosticPending(stats.pending);
+    } catch {
+      // Diagnostics must never interrupt handwriting practice.
+    }
+  }, []);
+
+  const sendDiagnosticsNow = useCallback(async () => {
+    if (diagnosticSyncing) return;
+    setDiagnosticSyncing(true);
+    try {
+      const result = await sendAllDiagnosticsNow();
+      await refreshDiagnosticStats();
+      const message = result.error
+        ? `Отправлено: ${result.sent}. Осталось в очереди: ${result.remaining}. Ошибка: ${result.error}`
+        : `Отправлено: ${result.sent} записей в ${result.batches} пакетах. В очереди: ${result.remaining}.`;
+      Alert.alert(result.error ? 'Отправка не завершена' : 'Диагностика отправлена', message);
+    } catch (error) {
+      await refreshDiagnosticStats();
+      Alert.alert('Ошибка отправки', error instanceof Error ? error.message : 'Не удалось отправить диагностику.');
+    } finally {
+      setDiagnosticSyncing(false);
+    }
+  }, [diagnosticSyncing, refreshDiagnosticStats]);
+
   useEffect(() => {
     let active = true;
     initializeDiagnosticStore()
       .then(() => AsyncStorage.removeItem('hc2:diagnostic-log:v1'))
+      .then(async () => {
+        await refreshDiagnosticStats();
+        // Old algorithm versions are eligible for immediate upload; current
+        // version data follows the normal five-record/session rules.
+        await retryEligibleDiagnosticUploads();
+        await refreshDiagnosticStats();
+      })
       .catch(() => { if (active) setNotice('Не удалось подготовить локальное хранилище диагностики. Проверка и обучение доступны.'); });
     Promise.all([loadPersonalDictionary(), AsyncStorage.getItem(settingsKey)]).then(([saved, rawSettings]) => {
       if (!active) return;
@@ -56,7 +101,33 @@ export function usePractice() {
       }
     }).catch(() => { if (active) setStorageError('Не удалось прочитать личный словарь.'); }).finally(() => { if (active) setReady(true); });
     return () => { active = false; };
-  }, []);
+  }, [refreshDiagnosticStats]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected) {
+        void retryEligibleDiagnosticUploads().then(refreshDiagnosticStats);
+      }
+    });
+    return unsubscribe;
+  }, [refreshDiagnosticStats]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      const previous = appState.current;
+      appState.current = nextState;
+      if (previous === 'active' && nextState !== 'active') {
+        if (sessionAttemptCount.current >= 5) {
+          void finishDiagnosticSession().then(refreshDiagnosticStats);
+        }
+        sessionAttemptCount.current = 0;
+        sessionId.current = `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      } else if (nextState === 'active') {
+        void retryEligibleDiagnosticUploads().then(refreshDiagnosticStats);
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshDiagnosticStats]);
 
   useEffect(() => { if (ready) savePersonalDictionary(data).then(() => setStorageError('')).catch(() => setStorageError('Изменения пока не сохранены на устройстве.')); }, [data, ready]);
   useEffect(() => { if (ready) AsyncStorage.setItem(settingsKey, JSON.stringify({ toleranceMode, boardScale })).catch(() => undefined); }, [ready, toleranceMode, boardScale]);
@@ -272,7 +343,7 @@ export function usePractice() {
       timestamp: new Date().toISOString(),
       sessionId: sessionId.current,
       schemaVersion: '1',
-      algorithmVersion: 'geometry-v1',
+      algorithmVersion: CURRENT_DIAGNOSTIC_ALGORITHM,
       appVersion: '1.0.0',
       character: character?.hanzi ?? null,
       toleranceMode,
@@ -301,7 +372,14 @@ export function usePractice() {
         message: verdict.message
       }
     };
-    void saveDiagnosticAttempt(diagnostic).catch(() => { setNotice('Не удалось сохранить диагностическую запись. Проверка и обучение продолжаются.'); });
+    void saveDiagnosticAttempt(diagnostic)
+      .then(async () => {
+        sessionAttemptCount.current += 1;
+        await refreshDiagnosticStats();
+        await checkDiagnosticUploadThreshold();
+        await refreshDiagnosticStats();
+      })
+      .catch(() => { setNotice('Не удалось сохранить диагностическую запись. Проверка и обучение продолжаются.'); });
     setAttemptCount(p => p + 1);
     setFeedback(verdict.message); setFlash(verdict.correct ? 'success' : 'error');
     if (verdict.correct) {
@@ -313,7 +391,7 @@ export function usePractice() {
       setAwaitingRetry(true);
       submit(false);
     }
-  }, [awaitingRetry, retry, shape, checking, strokes, toleranceMode, clearInk, submit, character, usedHint, pinyinShown, characterRevealed]);
+  }, [awaitingRetry, retry, shape, checking, strokes, toleranceMode, clearInk, submit, character, usedHint, pinyinShown, characterRevealed, refreshDiagnosticStats]);
 
   const setBoardScale = useCallback((scale: number) => setBoardScaleState(p => Math.max(0.6, Math.min(0.9, scale))), []);
   const resizeBoard = useCallback((factor: number) => setBoardScaleState(p => Math.max(0.6, Math.min(0.9, p * factor))), []);
@@ -326,7 +404,7 @@ export function usePractice() {
     mastered: data.active.filter(x => x.mastered).length, totalMastered: data.active.filter(x => x.mastered).length,
     streak: character?.streak ?? 0, attemptCount, toleranceMode, toleranceLimit: toleranceValues[toleranceMode], boardScale,
     activeCharacters: data.active, waitingCharacters: data.waiting, activeCount: data.active.length, waitingCount: data.waiting.length,
-    notice, clearNotice: () => setNotice(''), addCharacter, selectCharacter, retryWaiting, exportDiagnostics,
+    notice, clearNotice: () => setNotice(''), addCharacter, selectCharacter, retryWaiting, exportDiagnostics,\n    diagnosticPending, diagnosticSyncing, sendDiagnosticsNow,
     beginStroke, moveStroke, endStroke, cancelStroke: () => { live.current = []; setLiveStroke([]); },
     toggleHint, clear, check, retryLoad, cycleTolerance, selectTolerance, resizeBoard, setBoardScale, markCharacterRevealed, markPinyinShown, hintStatus,
     selectMode: () => undefined, selectCategory: () => undefined,
