@@ -313,7 +313,7 @@ export function evaluateWriting(
       userBounds,
       referenceBounds,
       normalizedUserStrokes: normalizedUser,
-      pairwiseScores,
+      pairwiseScores: pairScores,
       assignment,
       strokeComparisons,
       worstUserStrokeIndex: worstUserIndex,
