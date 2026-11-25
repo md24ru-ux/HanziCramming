@@ -14,6 +14,27 @@ export interface Verdict {
   correct: boolean;
   deviation: number;
   message: string;
+  diagnostics: {
+    failureReason?: 'stroke-count' | 'invalid-stroke';
+    userStrokeCount: number;
+    referenceStrokeCount: number;
+    userBounds?: ReturnType<typeof bounds>;
+    referenceBounds?: ReturnType<typeof bounds>;
+    normalizedUserStrokes?: Point[][];
+    pairwiseScores?: PairScore[][];
+    assignment?: number[];
+    strokeComparisons?: Array<{
+      userStrokeIndex: number;
+      referenceStrokeIndex: number;
+      meanDeviation: number;
+      endpointDeviation: number;
+      lengthDifference: number;
+      score: number;
+      reversed: boolean;
+    }>;
+    worstUserStrokeIndex?: number;
+      worstReferenceStrokeIndex?: number;
+  };
 }
 
 const memory = new Map<string, CharacterShape>();
@@ -228,15 +249,31 @@ export function evaluateWriting(
     return {
       correct: false,
       deviation: 100,
-      message: `Нужно черт: ${shape.medians.length}. У вас: ${strokes.length}.`
+      message: `Нужно черт: ${shape.medians.length}. У вас: ${strokes.length}.`,
+      diagnostics: {
+        failureReason: 'stroke-count',
+        userStrokeCount: strokes.length,
+        referenceStrokeCount: shape.medians.length
+      }
     };
   }
   if (strokes.some(stroke => stroke.length < 2)) {
-    return { correct: false, deviation: 100, message: 'Каждая черта должна содержать траекторию.' };
+    return {
+      correct: false,
+      deviation: 100,
+      message: 'Каждая черта должна содержать траекторию.',
+      diagnostics: {
+        failureReason: 'invalid-stroke',
+        userStrokeCount: strokes.length,
+        referenceStrokeCount: shape.medians.length
+      }
+    };
   }
 
   const referenceStrokes = shape.medians.map(medianPoints);
-  const referenceScale = bounds(referenceStrokes).diagonal;
+  const userBounds = bounds(strokes);
+  const referenceBounds = bounds(referenceStrokes);
+  const referenceScale = referenceBounds.diagonal;
   const normalizedUser = normalizeWholeCharacter(strokes, referenceStrokes);
   const pairScores = normalizedUser.map(userStroke =>
     referenceStrokes.map(referenceStroke => scorePair(userStroke, referenceStroke, referenceScale))
@@ -252,11 +289,35 @@ export function evaluateWriting(
   }
 
   const correct = worst < tolerance;
+  const strokeComparisons = assignment.map((referenceIndex, userIndex) => {
+    const pair = pairScores[userIndex][referenceIndex];
+    return {
+      userStrokeIndex: userIndex,
+      referenceStrokeIndex: referenceIndex,
+      meanDeviation: pair.mean,
+      endpointDeviation: pair.endpoint,
+      lengthDifference: pair.length,
+      score: pair.score,
+      reversed: pair.reversed
+    };
+  });
   return {
     correct,
     deviation: worst,
     message: correct
       ? `Верно · отклонение ${worst.toFixed(1)}%`
-      : `Черта ${worstUserIndex + 1} · отклонение ${worst.toFixed(1)}%. Повторите.`
+      : `Черта ${worstUserIndex + 1} · отклонение ${worst.toFixed(1)}%. Повторите.`,
+    diagnostics: {
+      userStrokeCount: strokes.length,
+      referenceStrokeCount: shape.medians.length,
+      userBounds,
+      referenceBounds,
+      normalizedUserStrokes: normalizedUser,
+      pairwiseScores,
+      assignment,
+      strokeComparisons,
+      worstUserStrokeIndex: worstUserIndex,
+      worstReferenceStrokeIndex: assignment[worstUserIndex]
+    }
   };
 }
