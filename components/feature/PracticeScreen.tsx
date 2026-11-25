@@ -59,9 +59,9 @@ export function PracticeScreen() {
             <Ionicons name="clipboard-outline" size={15} color={theme.colors.primary} />
             <Text style={styles.diagnosticText}>diag</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Отправить диагностику (функция пока не подключена)" onPress={() => undefined} style={styles.diagnosticButton}>
-            <Ionicons name="arrow-up-outline" style={styles.sendArrow} size={15} color={theme.colors.primary} />
-            <Text style={styles.diagnosticText}>diag</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Отправить накопленные диагностические отчёты" onPress={practice.sendDiagnosticsNow} disabled={practice.diagnosticSyncing || practice.diagnosticPending === 0} style={[styles.diagnosticButton, (practice.diagnosticSyncing || practice.diagnosticPending === 0) && styles.disabled]}>
+            <Ionicons name="cloud-upload-outline" size={15} color={theme.colors.primary} />
+            <Text style={styles.diagnosticText}>{practice.diagnosticSyncing ? '...' : `Отпр. ${practice.diagnosticPending}`}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Открыть список для повторения" onPress={() => setReviewVisible(true)} disabled={!practice.activeCount} style={[styles.progress, !practice.activeCount && styles.disabled]}>
             <Ionicons name="leaf-outline" size={17} color={theme.colors.primary} />
